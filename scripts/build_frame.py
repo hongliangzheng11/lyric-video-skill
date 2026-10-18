@@ -10,11 +10,67 @@ import unicodedata
 
 SKILL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TPL = os.path.join(SKILL, "assets", "frame_template.html")
+STYLES_PATH = os.path.join(SKILL, "config", "styles.json")
+CHARS_PATH = os.path.join(SKILL, "config", "characters.json")
 
 
 def load(path):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def band_runtime(p):
+    """Build the BAND runtime payload + style wrappers from config + style plan.
+
+    Falls back to the classic (legacy) performance when a project has no
+    style_plan.json, so older projects keep rendering exactly as before.
+    """
+    styles_cfg = load(STYLES_PATH)["styles"]
+    chars_cfg = load(CHARS_PATH)["characters"]
+
+    plan_path = os.path.join(p, "style_plan.json")
+    if os.path.isfile(plan_path):
+        plan = load(plan_path)
+    else:
+        dur = float(load(os.path.join(p, "project.json"))["duration"])
+        plan = {"version": 1, "mode": "fixed", "style": "classic",
+                "reason": "no style_plan.json — legacy classic performance",
+                "segments": [{"t0": 0.0, "t1": round(dur, 3), "style": "classic"}],
+                "used_styles": ["classic"], "seed": 0,
+                "events": [], "holds": [], "music": {}}
+
+    used = plan.get("used_styles") or sorted(set(s["style"] for s in plan["segments"]))
+    styles, wrappers = {}, []
+    for sid in used:
+        cfg = styles_cfg.get(sid) or styles_cfg["classic"]
+        sheets = cfg.get("sheets") or styles_cfg["classic"]["sheets"]
+        urls = ["../../assets/" + os.path.basename(s) for s in sheets]
+        styles[sid] = {
+            "rate": float(cfg.get("playback_rate", 1.0)),
+            "loop_frames": int(cfg.get("loop_frames", 109)),
+            "loop_fps": int(cfg.get("loop_fps", 24)),
+            "choreo": cfg.get("choreo", {}),
+            "accents": {"scale": float((cfg.get("accents") or {}).get("scale", 1.0)),
+                        "colors": (cfg.get("accents") or {}).get("colors", {})},
+            "glow": cfg.get("glow", {}),
+        }
+        wrappers.append(
+            '          <div class="bandstyle" id="bs-%s" data-style="%s" data-track-index="0">\n'
+            '            <div class="band" id="bs-%s-a" style="background-image:url(%s)"></div>\n'
+            '            <div class="band" id="bs-%s-b" style="background-image:url(%s); opacity:0"></div>\n'
+            '          </div>' % (sid, sid, sid, urls[0], sid, urls[1]))
+
+    band = {
+        "styles": styles,
+        "plan": {"segments": plan.get("segments", []), "seed": plan.get("seed", 0),
+                 "mode": plan.get("mode", "fixed")},
+        "characters": chars_cfg,
+        "events": plan.get("events", []),
+        "holds": plan.get("holds", []),
+        "music": plan.get("music", {}),
+        "mix": 0.45,
+    }
+    return "\n".join(wrappers), band
 
 
 def visual_width(text):
@@ -89,6 +145,12 @@ def main():
     html = html.replace("/*__LYRICS__*/[]",
                         json.dumps(lines, ensure_ascii=False, separators=(",", ":")))
 
+    # band performance styles (wrappers + runtime payload); classic when absent
+    band_wrappers, band = band_runtime(p)
+    html = html.replace("<!--__BAND_STYLES__-->", band_wrappers)
+    html = html.replace("/*__BAND__*/null",
+                        json.dumps(band, ensure_ascii=False, separators=(",", ":")))
+
     # outro card / credit / fade must follow the actual tail of the song, not a
     # fixed second count — a 4:31 track would otherwise show the closing card
     # in the middle of verse three.
@@ -122,6 +184,7 @@ def main():
 
     for token in ("__DUR__", "__TITLE__", "__TAGLINE__", "__ARTIST_UPPER__",
                   "__TITLE_SIZE__", "__OUTRO_SIZE__", "/*__MOTION__*/", "/*__LYRICS__*/",
+                  "/*__BAND__*/", "<!--__BAND_STYLES__-->",
                   "__CREDIT_OUT0__", "__OUTRO_IN0__", "__TITLE_IN0__",
                   "__TITLE_IN1P__", "__TITLE_OUT0__", "__FADE0__"):
         if token in html:
@@ -131,8 +194,9 @@ def main():
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         f.write(html)
-    print("wrote %s (%d bytes, %d lines, %d legs, %d bounces)"
-          % (out, len(html), len(lines), len(motion["legs"]), len(motion["bounces"])))
+    print("wrote %s (%d bytes, %d lines, %d legs, %d bounces, band styles: %s)"
+          % (out, len(html), len(lines), len(motion["legs"]), len(motion["bounces"]),
+             ", ".join(band["styles"].keys())))
 
 
 if __name__ == "__main__":

@@ -28,11 +28,38 @@
 </p>
 <p align="center"><em>16 个时间点抽帧（混排 / 日语 / 副歌 / 片尾全覆盖）</em></p>
 
+## 🎸 乐队表演风格（同一首歌，五种演法）
+
+底部小动物乐队不再只有一种循环演法：默认 `classic` 完整保留本站最初的观感（向后兼容，旧项目零改动），
+另外提供 **深情倾听 / 激情演奏 / 搞笑互动 / 温馨合奏** 四种风格，以及按乐句能量自动分段的 `mixed` 混搭模式。
+
+<p align="center">
+  <img src="docs/images/style-showcase.jpg" width="720" alt="style showcase">
+</p>
+<p align="center"><em>同曲同时间点 A/B：上排 t=8s（姿态来自播放速率差异），下排 t=47.5s 同一句歌词；
+最右列为 mixed，搞笑桥段带定格 + 反应气泡</em></p>
+
+| 风格 | 适合 | 动画强度 | 互动概率 |
+| --- | --- | --- | --- |
+| `classic` 经典循环 | 任何歌（默认 / 兜底） | 0.00 | 0.00 |
+| `emotional_listening` 深情倾听 | 慢歌、低能量、抒情 | 0.25 | 0.05 |
+| `energetic_performance` 激情演奏 | ≥105 BPM、高能量 | 1.00 | 0.15 |
+| `funny_interaction` 搞笑互动 | 过门、hard stop、rolls 多 | 0.70 | 1.00 |
+| `cozy_ensemble` 温馨合奏 | 中速平稳、陪伴感 | 0.45 | 0.35 |
+
+风格选择优先级：**`--style` 命令行 > `project.json.style` > `auto` 自动推荐 > `mixed` 分段**。
+所有差异都是参数化的：播放速率（0.625×/1.0×/1.25×，均与 30 fps 输出整数对齐）、编舞曲线（摇摆/弹跳/呼吸/拍点冲击）、
+角色锚点 SVG 点缀（音符/爱心/闪光/!/?）、定格 + 反应气泡的搞笑桥段、风格化舞台光。
+随机行为全部由 `crc32(歌手|歌名)` 种子预生成时间表，渲染状态是 `t` 的纯函数——同时间点两次渲染像素级一致，
+**风格切换绝不动歌词时间轴**。参数与 auto 判定链锁定值见 `references/style-spec.md`。
+
 ## 🎯 特性
 
 - **固定视觉规范**，不逐首重新设计：深蓝紫梦境背景 + 两组光斑交叉淡入 + 单个透明玻璃几何体（8 种圆角轮廓，撞屏幕边缘沿法线压缩 11% 后变形反弹）+ 底部小动物乐队（猫/熊/企鹅/狐狸）无缝循环。
 - **居中双语字幕**：原文在上（Inter，含 Yu Gothic/Meiryo 假名兜底），中文在下（宋体，暖棕 `#DDA97D`），整块以 y≈960 为光学中心，同组淡入淡出；画面里没有任何 VERSE / CHORUS 段落标签。
 - **时间轴全部实测**：字幕起止来自 Whisper 词级时间戳，禁止用 BPM/节拍网格推算；成片时长严格等于音频时长（±1 帧内）。
+- **五种乐队演法 + 分段混搭**：`classic`（默认，保留最初观感）/ `emotional_listening` / `energetic_performance` / `funny_interaction` / `cozy_ensemble`，可按乐句能量自动分段切换；手动指定风格永远优先。
+- **语言支持 en / ja / zh**：英文、日文（假名字体兜底）、中文原文歌（不显示空译行）均已实测；混唱按逐句实际语言走原文 + 中文两行。
 - **混语言歌支持**：逐窗自动判语种（英语+日语、英语+韩语等均可），另一种语言不会被强行听写成第一种。
 - **完全可复现**：玻璃体运动种子由「歌手名+歌名」决定，同一首歌每次重跑视觉路径完全一致；改歌词不用重做视觉。
 
@@ -44,6 +71,7 @@
 | 歌手名 | **必需** | 用于片头、常驻角标、片尾署名 |
 | 官方歌词 | 可选 | 给了走快路径（文本零猜测）；不给则 Whisper 重建 + 多通道交叉验证 |
 | 歌名 / 主题句 | 可选 | 缺省取文件名；主题句为片头标题下一行中文 |
+| 乐队风格 | 可选 | `auto` / `mixed` / 五种风格之一，缺省 `auto`；手动指定永远优先 |
 
 ## 🛤 歌词的两种路径
 
@@ -65,7 +93,7 @@
 
 ```bash
 # 1. 建项目：建目录 → 复制音频 → 转 16k WAV → 节拍分析 → 注入模板素材
-python scripts/new_project.py "<音频路径>" "<歌手名>" [--title "歌名"]
+python scripts/new_project.py "<音频路径>" "<歌手名>" [--title "歌名"] [--style auto]
 
 # 2. 转写（混语言歌用 transcribe_mixed.py；3A 路径此步可选）
 python scripts/transcribe.py "<project>" --model medium.en --lang en
@@ -77,6 +105,7 @@ python scripts/rescan.py "<project>" --from 6.0 --to 20.0 --model large-v3-turbo
 
 # 4. 对齐 + 生成（align 输出「every line anchored to a real sung timestamp」才继续）
 python scripts/align_lyrics.py "<project>" && python scripts/motion.py "<project>"
+python scripts/plan_styles.py "<project>"          # 风格规划 → style_plan.json（可 --style 覆盖）
 python scripts/gen_storyboard.py "<project>" && python scripts/build_frame.py "<project>"
 python scripts/make_index.py "<project>"
 
@@ -106,18 +135,20 @@ python scripts/verify.py "<project>"
 ```
 lyric-video/
 ├── SKILL.md                    # skill 入口：完整流程与纪律
-├── scripts/                    # 10 个流水线脚本
-│   ├── new_project.py          #   建项目 + 节拍分析
+├── scripts/                    # 11 个流水线脚本
+│   ├── new_project.py          #   建项目 + 节拍分析（--style 写入 project.json）
 │   ├── transcribe.py           #   全曲转写
 │   ├── transcribe_mixed.py     #   混语言歌逐窗判语种转写
 │   ├── rescan.py               #   提示词分区重解（时间轴精度核心）
 │   ├── align_lyrics.py         #   歌词-音频对齐（manual 通道）
 │   ├── motion.py               #   玻璃体运动（种子可复现）
+│   ├── plan_styles.py          #   乐队风格规划（auto/mixed/固定）→ style_plan.json
 │   ├── gen_storyboard.py       #   分镜
-│   ├── build_frame.py          #   帧模板渲染
+│   ├── build_frame.py          #   帧模板渲染（注入风格 payload）
 │   ├── make_index.py           #   合成索引
 │   └── verify.py               #   成片规格验收
 ├── assets/                     # 帧模板 + 乐队雪碧图 + GSAP
-├── references/style-spec.md    # 视觉规范细节
+├── config/                     # 风格参数（styles.json）+ 角色卡（characters.json）
+├── references/style-spec.md    # 视觉规范细节（含风格系统锁定值）
 └── docs/images/                # README 展示素材
 ```

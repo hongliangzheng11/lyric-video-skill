@@ -59,6 +59,10 @@ def main():
     ap.add_argument("--tagline", default="")
     ap.add_argument("--root", default=DEFAULT_ROOT)
     ap.add_argument("--hyperframes", default=DEFAULT_HF)
+    ap.add_argument("--style", default="auto",
+                    help="classic | emotional_listening | energetic_performance | "
+                         "funny_interaction | cozy_ensemble | auto | mixed "
+                         "(default auto; plan_styles.py can still override)")
     args = ap.parse_args()
 
     audio = os.path.abspath(args.audio)
@@ -101,6 +105,7 @@ def main():
         "canvas": [1080, 1920],
         "fps": 30,
         "hyperframes": args.hyperframes,
+        "style": args.style,
     }
     with open(os.path.join(project, "project.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)

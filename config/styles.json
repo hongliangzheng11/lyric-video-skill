@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "default": "classic",
+  "notes": {
+    "style_id": "唯一标识，style_plan.json 与模板运行时都用它索引",
+    "sheets": "该风格的乐队雪碧图（assets/ 下文件名）。同一文件可被多个风格共用；缺省时回退 classic 的 band_sheet{1,2}.webp",
+    "loop_frames/loop_fps": "雪碧图内循环帧数与帧率。classic 为 109 帧 @ 24 fps",
+    "playback_rate": "循环播放倍速。0.625=12fps（深情慢放），1.0=原始，1.25=30fps（激情顺滑加速）",
+    "choreo": "编舞参数（角度/像素/比例），由模板 JS 解析成确定性的连续曲线，不引入随机",
+    "accents": "点缀事件生成权重（音符/爱心/闪光/惊叹号/问号），由 plan_styles.py 按节拍落点确定性生成",
+    "holds": "定格（停帧）演出配置，仅 funny_interaction 默认开启",
+    "glow": "舞台光颜色与呼吸参数（rgb, base, breath, energy）"
+  },
+  "styles": {
+    "classic": {
+      "style_id": "classic",
+      "style_name": "经典循环（默认）",
+      "description": "现行默认观感：原始 109 帧循环 1x 播放 + 舞台光随能量呼吸，不追加编舞与点缀。未选择风格时使用，完全保留旧版视觉。",
+      "suitable_moods": ["any"],
+      "sheets": ["band_sheet1.webp", "band_sheet2.webp"],
+      "loop_frames": 109,
+      "loop_fps": 24,
+      "playback_rate": 1.0,
+      "motion_intensity": 0.0,
+      "interaction_probability": 0.0,
+      "music_energy_response": 0.35,
+      "choreo": {
+        "sway_amp": 0.0,
+        "sway_period": 8.0,
+        "bounce_amp": 0.0,
+        "bounce_beats": 4,
+        "breathe_amp": 0.0,
+        "breathe_period": 12.0,
+        "beat_punch": 0.0,
+        "punch_decay": 9.0
+      },
+      "accents": {
+        "rate_per_min": 0,
+        "kinds": {},
+        "char_weights": { "cat": 1, "bear": 1, "penguin": 1, "fox": 1 },
+        "scale": 1.0
+      },
+      "holds": { "enabled": false },
+      "glow": { "rgb": [44, 118, 150], "base": 0.52, "breath": 0.16, "energy": 0.16 }
+    },
+    "emotional_listening": {
+      "style_id": "emotional_listening",
+      "style_name": "深情倾听",
+      "description": "适合抒情、慢歌、安静段落：循环慢放，整体缓慢大幅摇摆，轻微呼吸缩放，爱心与音符轻柔飘起；鼓点轻、动作幅度小，强调细腻情绪。",
+      "suitable_moods": ["抒情", "慢歌", "安静", "怀念", "治愈"],
+      "sheets": ["band_sheet1.webp", "band_sheet2.webp"],
+      "loop_frames": 109,
+      "loop_fps": 24,
+      "playback_rate": 0.625,
+      "motion_intensity": 0.25,
+      "interaction_probability": 0.05,
+      "music_energy_response": 0.3,
+      "choreo": {
+        "sway_amp": 1.0,
+        "sway_period": 9.5,
+        "bounce_amp": 3.0,
+        "bounce_beats": 4,
+        "breathe_amp": 0.005,
+        "breathe_period": 11.0,
+        "beat_punch": 0.0,
+        "punch_decay": 9.0
+      },
+      "accents": {
+        "rate_per_min": 7,
+        "kinds": { "heart": 0.4, "note": 0.45, "spark": 0.15 },
+        "char_weights": { "cat": 0.25, "bear": 0.15, "penguin": 0.3, "fox": 0.3 },
+        "scale": 0.9,
+        "colors": { "heart": "#F2A9C4", "note": "#CFE0FF", "spark": "#E8DFFF" }
+      },
+      "holds": { "enabled": false },
+      "glow": { "rgb": [70, 96, 190], "base": 0.42, "breath": 0.12, "energy": 0.1 }
+    },
+    "energetic_performance": {
+      "style_id": "energetic_performance",
+      "style_name": "激情演奏",
+      "description": "适合摇滚、流行、强节奏歌曲：循环加速到 30fps 播放，每拍一次缩放冲击，整支乐队随小节摇摆+大弹跳，音符与重音记号密集弹出；动作幅度随音乐能量放大。",
+      "suitable_moods": ["摇滚", "流行", "强节奏", "高潮", "动感"],
+      "sheets": ["band_sheet1.webp", "band_sheet2.webp"],
+      "loop_frames": 109,
+      "loop_fps": 24,
+      "playback_rate": 1.25,
+      "motion_intensity": 1.0,
+      "interaction_probability": 0.15,
+      "music_energy_response": 1.0,
+      "choreo": {
+        "sway_amp": 1.6,
+        "sway_period": 1.67,
+        "bounce_amp": 9.0,
+        "bounce_beats": 1,
+        "breathe_amp": 0.008,
+        "breathe_period": 1.67,
+        "beat_punch": 0.013,
+        "punch_decay": 7.0
+      },
+      "accents": {
+        "rate_per_min": 22,
+        "kinds": { "note": 0.5, "bang": 0.3, "spark": 0.2 },
+        "char_weights": { "cat": 0.3, "bear": 0.3, "penguin": 0.15, "fox": 0.25 },
+        "scale": 1.1,
+        "colors": { "note": "#FFD9A0", "bang": "#FF9FB0", "spark": "#FFE1B8" }
+      },
+      "holds": { "enabled": false },
+      "glow": { "rgb": [196, 88, 120], "base": 0.55, "breath": 0.2, "energy": 0.22 }
+    },
+    "funny_interaction": {
+      "style_id": "funny_interaction",
+      "style_name": "搞笑互动",
+      "description": "适合轻松、有趣、变化丰富的歌曲：在乐句边界/过门处插入少量「集体定格+反应气泡」（惊叹号/问号），定格后自然恢复演奏；点缀有铺垫、反应、收尾，不允许全程乱动。",
+      "suitable_moods": ["轻松", "搞笑", "有趣", "俏皮"],
+      "sheets": ["band_sheet1.webp", "band_sheet2.webp"],
+      "loop_frames": 109,
+      "loop_fps": 24,
+      "playback_rate": 1.0,
+      "motion_intensity": 0.7,
+      "interaction_probability": 1.0,
+      "music_energy_response": 0.6,
+      "choreo": {
+        "sway_amp": 1.1,
+        "sway_period": 2.2,
+        "bounce_amp": 5.0,
+        "bounce_beats": 2,
+        "breathe_amp": 0.006,
+        "breathe_period": 6.0,
+        "beat_punch": 0.004,
+        "punch_decay": 5.0
+      },
+      "accents": {
+        "rate_per_min": 12,
+        "kinds": { "bang": 0.4, "quest": 0.35, "note": 0.25 },
+        "char_weights": { "cat": 0.25, "bear": 0.3, "penguin": 0.3, "fox": 0.15 },
+        "scale": 1.15,
+        "colors": { "bang": "#FFD34D", "quest": "#9FE8FF", "note": "#FFF3C4" }
+      },
+      "holds": {
+        "enabled": true,
+        "max_count": 3,
+        "min_gap": 18.0,
+        "dur_min": 0.24,
+        "dur_max": 0.4
+      },
+      "glow": { "rgb": [190, 150, 70], "base": 0.5, "breath": 0.18, "energy": 0.14 }
+    },
+    "cozy_ensemble": {
+      "style_id": "cozy_ensemble",
+      "style_name": "温馨合奏",
+      "description": "适合温暖、舒适、轻快、有陪伴感的歌曲：动作比激情演奏柔和、比深情倾听活泼；每小节重拍集体轻点头，摇摆节奏稳定，音符/爱心/闪光错落飘起，强调默契与陪伴感。",
+      "suitable_moods": ["温暖", "舒适", "轻快", "陪伴", "家庭乐队"],
+      "sheets": ["band_sheet1.webp", "band_sheet2.webp"],
+      "loop_frames": 109,
+      "loop_fps": 24,
+      "playback_rate": 1.0,
+      "motion_intensity": 0.45,
+      "interaction_probability": 0.35,
+      "music_energy_response": 0.55,
+      "choreo": {
+        "sway_amp": 0.7,
+        "sway_period": 2.5,
+        "bounce_amp": 4.0,
+        "bounce_beats": 2,
+        "breathe_amp": 0.005,
+        "breathe_period": 8.0,
+        "beat_punch": 0.006,
+        "punch_decay": 6.0
+      },
+      "accents": {
+        "rate_per_min": 10,
+        "kinds": { "note": 0.35, "heart": 0.35, "spark": 0.3 },
+        "char_weights": { "cat": 0.25, "bear": 0.2, "penguin": 0.25, "fox": 0.3 },
+        "scale": 1.0,
+        "colors": { "note": "#FFE3B8", "heart": "#F2A9C4", "spark": "#FFF0D0" }
+      },
+      "holds": { "enabled": false },
+      "glow": { "rgb": [170, 120, 140], "base": 0.5, "breath": 0.18, "energy": 0.16 }
+    }
+  }
+}

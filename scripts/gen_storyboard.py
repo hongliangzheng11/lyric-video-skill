@@ -30,6 +30,14 @@ def main():
     copy_block = "\n".join('      "%s",' % l["en"] for l in lyr)
     cid = meta["title"].lower().replace(" ", "-")
 
+    plan = {}
+    plan_path = os.path.join(p, "style_plan.json")
+    if os.path.isfile(plan_path):
+        with open(plan_path, encoding="utf-8") as f:
+            plan = json.load(f)
+    used = ", ".join(plan.get("used_styles") or ["classic"])
+    plan_txt = "%s / %s" % (plan.get("mode", "fixed"), plan.get("reason", "legacy"))
+
     md = """---
 compositionId: %s-lyric
 duration_s: %s
@@ -45,6 +53,8 @@ build_notes:
   - "original line + Chinese translation shown as one subtitle group"
   - "credit reads %s; no verse/chorus/section labels anywhere on screen"
   - "animal band sprite layer at the bottom, seamless 4.54 s loop, composited with screen blend"
+  - "band performance style(s): %s; choreography, accents and freeze frames are pre-scheduled in style_plan.json — deterministic per project"
+  - "style plan: %s"
 avoid:
   - "section labels (VERSE / CHORUS / BRIDGE)"
   - "liquid, gooey or shattered shapes — the body always keeps a clean geometric outline"
@@ -71,7 +81,8 @@ avoid:
   - copy: [
 %s
     ]
-""" % (cid, dur, meta.get("artist", ""), dur, dur, tempo_txt, len(lyr), dur, anchors, copy_block)
+""" % (cid, dur, meta.get("artist", ""), used, plan_txt,
+        dur, dur, tempo_txt, len(lyr), dur, anchors, copy_block)
 
     with open(os.path.join(p, "STORYBOARD.md"), "w", encoding="utf-8") as f:
         f.write(md)

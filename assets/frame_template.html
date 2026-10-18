@@ -64,12 +64,18 @@
           position: absolute; inset: 0;
           background: radial-gradient(46% 31% at 50% 89%, rgba(44, 118, 150, 0.34) 0%, rgba(44, 118, 150, 0.11) 46%, rgba(44, 118, 150, 0) 76%);
         }
-        .band {
-          position: absolute; left: 0; bottom: 0; width: 1080px; height: 526px;
-          mix-blend-mode: screen; background-repeat: no-repeat; background-size: 8640px 3682px;
+        /* one wrapper per used style; wrappers cross-fade on style switches */
+        .band-stage { position: absolute; left: 0; bottom: 0; width: 1080px; height: 526px; }
+        .bandstyle {
+          position: absolute; left: 0; top: 0; width: 1080px; height: 526px;
+          mix-blend-mode: screen; opacity: 0; transform-origin: 50% 100%;
         }
-        #bandA { background-image: url(../../assets/band_sheet1.webp); }
-        #bandB { background-image: url(../../assets/band_sheet2.webp); opacity: 0; }
+        .bandstyle .band {
+          position: absolute; left: 0; top: 0; width: 1080px; height: 526px;
+          background-repeat: no-repeat; background-size: 8640px 3682px;
+        }
+        .band-accents { position: absolute; left: 0; top: 0; width: 1080px; height: 526px; pointer-events: none; }
+        .acc { position: absolute; left: 0; top: 0; opacity: 0; will-change: transform, opacity; }
 
         .bubble-layer { position: absolute; inset: 0; width: 1080px; height: 1920px; }
 
@@ -103,6 +109,8 @@
           color: #DDA97D;
           text-shadow: 0 2px 28px rgba(0, 0, 0, 0.98), 0 1px 5px rgba(0, 0, 0, 0.92);
         }
+        /* a Chinese-original line carries no translation row (zh stays empty) */
+        .line .zh:empty { display: none; }
 
         .title {
           position: absolute; left: 0; right: 0; top: 50%; text-align: center; opacity: 0;
@@ -159,8 +167,10 @@
         <div class="tint" id="tint" data-track-index="0"></div>
 
         <div class="band-glow" id="bandGlow" data-track-index="0"></div>
-        <div class="band" id="bandA" data-track-index="0"></div>
-        <div class="band" id="bandB" data-track-index="0"></div>
+        <div class="band-stage" id="bandStage" data-track-index="0">
+          <!--__BAND_STYLES__-->
+          <div class="band-accents" id="bandAccents" data-track-index="0"></div>
+        </div>
 
         <svg class="bubble-layer" id="bubbleLayer" viewBox="0 0 1080 1920" width="1080" height="1920" data-track-index="0">
           <defs>
@@ -349,6 +359,7 @@
           var MOTION = /*__MOTION__*/{ "legs": [], "bounces": [] };
           var ENERGY = /*__ENERGY__*/[[0, 1, 0.02]];
           var LYRICS = /*__LYRICS__*/[];
+          var BAND = /*__BAND__*/null;
 
           function energyAt(t) {
             for (var i = 0; i < ENERGY.length; i++) {
@@ -411,15 +422,270 @@
           var glowwrap2 = document.getElementById("glowwrap2");
           var tintEl = document.getElementById("tint");
           var bandGlowEl = document.getElementById("bandGlow");
-          var bandAEl = document.getElementById("bandA");
-          var bandBEl = document.getElementById("bandB");
-          var bandIdx = -1, bandSheet = -1;
           var creditEl = document.getElementById("credit");
           var titleEl = document.getElementById("title");
           var outroEl = document.getElementById("outro");
           var fadeEl = document.getElementById("fade");
 
           var lastShapeKey = "";
+
+          /* ================= band performance runtime =================
+           * Style plan + per-style params arrive pre-baked in BAND (see
+           * plan_styles.py / config/styles.json). Everything below is a pure
+           * function of t, so any seek renders the same frame as continuous
+           * playback — no CSS animations, no per-frame randomness.          */
+          var BSEG = (BAND && BAND.plan && BAND.plan.segments) || [];
+          var BHOLDS = (BAND && BAND.holds) || [];
+          var BEVENTS = (BAND && BAND.events) || [];
+          var BCHARS = (BAND && BAND.characters) || {};
+          var BSTYLES = (BAND && BAND.styles) || {};
+          var BMIX = (BAND && BAND.mix) || 0.45;
+          var BANDW = 1080, BANDH = 526, CELLX = 1.5, CELLY = 1.503;
+
+          var bandEls = {};        // style id -> {wrap, a, b, idx, sheet}
+          var accPool = [];        // recycled accent nodes
+          var ACC_POOL = 26;
+
+          var curStyle = null, curCfg = null, prevStyle = null, mixT0 = -1;
+
+          (function initBand() {
+            var stage = document.getElementById("bandStage");
+            if (!stage) return;
+            var wraps = stage.querySelectorAll(".bandstyle");
+            for (var i = 0; i < wraps.length; i++) {
+              var w = wraps[i], sid = w.getAttribute("data-style");
+              var bs = w.querySelectorAll(".band");
+              bandEls[sid] = {wrap: w, a: bs[0], b: bs[1], idx: -1, sheet: -1};
+            }
+            var accRoot = document.getElementById("bandAccents");
+            for (var k = 0; k < ACC_POOL; k++) {
+              var d = document.createElement("div");
+              d.className = "acc";
+              accRoot.appendChild(d);
+              accPool.push({el: d, ev: null});
+            }
+          })();
+
+          function styleAt(t) {
+            if (!BSEG.length) return null;
+            var lo = 0, hi = BSEG.length - 1;
+            while (lo < hi) {
+              var mid = (lo + hi) >> 1;
+              if (t < BSEG[mid].t1) hi = mid; else lo = mid + 1;
+            }
+            return BSEG[lo].style;
+          }
+
+          function rateAt(t) {
+            var s = styleAt(t);
+            return (BSTYLES[s] && BSTYLES[s].rate) || 1.0;
+          }
+
+          /* loop time: integrates playback rate, freezes during hold frames */
+          function loopTime(t) {
+            var lt = 0, prev = 0;
+            for (var i = 0; i < BHOLDS.length; i++) {
+              var h = BHOLDS[i];
+              if (h.t >= t) break;
+              if (t < h.t + h.dur) return lt + (h.t - prev) * rateAt(prev);
+              lt += (h.t + h.dur - prev) * rateAt(h.t + h.dur);
+              prev = h.t + h.dur;
+            }
+            return lt + (t - prev) * rateAt(t);
+          }
+
+          function applyGlow(cfg) {
+            var g = cfg.glow || {rgb: [44, 118, 150], base: 0.52};
+            var c = "rgba(" + g.rgb[0] + "," + g.rgb[1] + "," + g.rgb[2] + ",";
+            bandGlowEl.style.background =
+              "radial-gradient(46% 31% at 50% 89%, " + c + g.base + ") 0%, " +
+              c + (g.base * 0.33).toFixed(3) + ") 46%, " + c + "0) 76%)";
+          }
+
+          function switchStyle(sid, t) {
+            if (sid === curStyle || !bandEls[sid]) return;
+            prevStyle = curStyle;
+            curStyle = sid;
+            curCfg = BSTYLES[sid];
+            mixT0 = t;
+            applyGlow(curCfg);
+          }
+
+          /* beat-synced bounce: impact right on the beat, settle until the next */
+          function beatBounce(t, beats, every) {
+            if (!beats.length) return 0;
+            var lo = 0, hi = beats.length - 1;
+            while (lo < hi) {
+              var mid = (lo + hi) >> 1;
+              if (beats[mid] <= t) lo = mid + 1; else hi = mid;
+            }
+            var i = Math.max(0, lo - 1);
+            if (i % every !== 0) i -= (i % every);
+            var bt = beats[i], bn = beats[Math.min(beats.length - 1, i + every)];
+            var u = (t - bt) / Math.max(0.05, bn - bt);
+            if (u < 0) u = 0;
+            if (u > 1) u = 1;
+            return Math.pow(1 - u, 1.6);
+          }
+
+          function bandFrameFor(el, bi, loopFrames) {
+            var sheet = bi < 56 ? 0 : 1;
+            if (sheet !== el.sheet) {
+              el.sheet = sheet;
+              el.a.style.opacity = sheet === 0 ? "1" : "0";
+              el.b.style.opacity = sheet === 0 ? "0" : "1";
+            }
+            var local = sheet === 0 ? bi : bi - 56;
+            (sheet === 0 ? el.a : el.b).style.backgroundPosition =
+              (-(local % 8) * BANDW) + "px " + (-Math.floor(local / 8) * BANDH) + "px";
+            el.idx = bi;
+          }
+
+          /* accent glyphs — pure SVG, no font dependency */
+          function accentSVG(kind, color) {
+            if (kind === "note") {
+              return '<svg viewBox="0 0 24 24" width="100%" height="100%">' +
+                '<ellipse cx="7.2" cy="17" rx="3.6" ry="2.8" transform="rotate(-18 7.2 17)" fill="' + color + '"/>' +
+                '<rect x="10.1" y="3.4" width="1.7" height="14" fill="' + color + '"/>' +
+                '<path d="M11.8 3.4c3 .8 4.7 2.6 5.1 5.6-1.4-1.8-3.1-2.6-5.1-2.9v-2.7z" fill="' + color + '"/></svg>';
+            }
+            if (kind === "heart") {
+              return '<svg viewBox="0 0 24 24" width="100%" height="100%">' +
+                '<path d="M12 20.6S4 15.7 4 10.3A4.5 4.5 0 0 1 12 7.5a4.5 4.5 0 0 1 8 2.8c0 5.4-8 10.3-8 10.3z" fill="' + color + '"/></svg>';
+            }
+            if (kind === "spark") {
+              return '<svg viewBox="0 0 24 24" width="100%" height="100%">' +
+                '<path d="M12 1.4l2.2 7.5 7.6 2.2-7.6 2.2L12 21.6l-2.2-7.5-7.6-2.2 7.6-2.2z" fill="' + color + '"/></svg>';
+            }
+            if (kind === "bang") {
+              return '<svg viewBox="0 0 24 24" width="100%" height="100%">' +
+                '<path d="M12 3.2v9.4" stroke="' + color + '" stroke-width="4.2" stroke-linecap="round"/>' +
+                '<circle cx="12" cy="17.6" r="2.5" fill="' + color + '"/></svg>';
+            }
+            /* quest */
+            return '<svg viewBox="0 0 24 24" width="100%" height="100%">' +
+              '<path d="M7.8 8.6a4.3 4.3 0 1 1 6.9 3.4c-1.2.9-1.9 1.8-1.9 3.3" fill="none" stroke="' + color +
+              '" stroke-width="2.7" stroke-linecap="round"/>' +
+              '<circle cx="12.8" cy="18.6" r="1.9" fill="' + color + '"/></svg>';
+          }
+
+          var ACC_DUR = {note: 1.5, heart: 1.5, spark: 1.1, bang: 0.7, quest: 0.85};
+          var ACC_SIZE = {note: 48, heart: 46, spark: 38, bang: 56, quest: 56};
+          var ACC_RISE = {note: 96, heart: 88, spark: 110, bang: 60, quest: 64};
+
+          function updateAccents(t) {
+            var vis = 0;
+            for (var i = 0; i < BEVENTS.length; i++) {
+              var e = BEVENTS[i];
+              if (e.t > t) break;
+              var a = t - e.t, dur = ACC_DUR[e.kind] || 1.2;
+              if (a < dur) vis++;
+              if (vis > ACC_POOL) break;
+            }
+            var slot = 0;
+            for (var j = 0; j < BEVENTS.length && slot < vis; j++) {
+              var ev = BEVENTS[j];
+              if (ev.t > t) break;
+              var age = t - ev.t, d = ACC_DUR[ev.kind] || 1.2;
+              if (age >= d) continue;
+              slot++;
+              var p = accPool[slot - 1], el = p.el;
+              if (p.ev !== ev) {
+                p.ev = ev;
+                var col = ((BSTYLES[curStyle] || {}).accents || {}).colors || {};
+                el.innerHTML = accentSVG(ev.kind, col[ev.kind] || "#FFFFFF");
+              }
+              var u = age / d;
+              var ch = (BCHARS[ev.char] || {}).spawn || [360, 60];
+              var size = (ACC_SIZE[ev.kind] || 40) * ((BSTYLES[curStyle] || {}).accents || {}).scale || 40;
+              var jx = (((ev.t * 9973 + slot * 7919) % 100) / 100 - 0.5) * 18;
+              var x = ch[0] * CELLX + jx, y = ch[1] * CELLY;
+              var rise = (ACC_RISE[ev.kind] || 90) * (1 - Math.pow(1 - u, 2));
+              var op = Math.sin(Math.PI * u);
+              var sc = 0.55 + 0.45 * Math.min(1, u * 4) * (1 - 0.25 * u);
+              el.style.opacity = op.toFixed(3);
+              el.style.width = size + "px";
+              el.style.height = size + "px";
+              el.style.transform =
+                "translate(" + (x - size / 2).toFixed(1) + "px," + (y - size / 2 - rise).toFixed(1) + "px)" +
+                " rotate(" + (Math.sin(u * 6.28 + slot) * 9).toFixed(1) + "deg) scale(" + sc.toFixed(3) + ")";
+              el.style.visibility = op > 0.004 ? "visible" : "hidden";
+            }
+            for (var k = slot; k < accPool.length; k++) {
+              if (accPool[k].el.style.visibility !== "hidden") {
+                accPool[k].el.style.visibility = "hidden";
+                accPool[k].el.style.opacity = "0";
+                accPool[k].ev = null;
+              }
+            }
+          }
+
+          function renderBand(t, en) {
+            var sid = styleAt(t);
+            if (!sid) return;
+            if (sid !== curStyle) switchStyle(sid, t);
+            var cfg = BSTYLES[sid] || BSTYLES.classic;
+            if (!cfg) return;
+            var ch = cfg.choreo || {};
+            var beats = (BAND.music || {}).beats || [];
+            var dbeats = (BAND.music || {}).downbeats || [];
+
+            /* cross-fade wrappers driven by timeline time (not CSS) */
+            var fadeOld = 0, fadeNew = 1;
+            if (prevStyle && bandEls[prevStyle] && t < mixT0 + BMIX) {
+              fadeNew = clamp01((t - mixT0) / BMIX);
+              fadeOld = 1 - fadeNew;
+              fadeNew = fadeNew * fadeNew * (3 - 2 * fadeNew);
+              fadeOld = 1 - (1 - fadeOld) * (1 - fadeOld);
+            }
+            for (var key in bandEls) {
+              if (!Object.prototype.hasOwnProperty.call(bandEls, key)) continue;
+              var e = bandEls[key];
+              var op = key === curStyle ? fadeNew : (key === prevStyle ? fadeOld : 0);
+              if (Math.abs(parseFloat(e.wrap.style.opacity || "0") - op) > 0.003) {
+                e.wrap.style.opacity = op.toFixed(3);
+              }
+            }
+
+            /* choreography — deterministic curves in t */
+            var bounce = (ch.bounce_amp || 0) * beatBounce(t, beats, ch.bounce_beats || 2) * (0.55 + 0.45 * en);
+            var sway = (ch.sway_amp || 0) * Math.sin(2 * Math.PI * t / (ch.sway_period || 8));
+            var breathe = 1 + (ch.breathe_amp || 0) * Math.sin(2 * Math.PI * t / (ch.breathe_period || 12));
+            var punch = (ch.beat_punch || 0) * beatBounce(t, dbeats, 1);
+            var holdPop = 0;
+            for (var h = 0; h < BHOLDS.length; h++) {
+              if (BHOLDS[h].t > t) break;
+              if (t >= BHOLDS[h].t && t < BHOLDS[h].t + BHOLDS[h].dur) {
+                holdPop = 0.02 * Math.exp(-(t - BHOLDS[h].t) * 9);
+              }
+            }
+            var wrap = bandEls[curStyle].wrap;
+            wrap.style.transform = "translateY(" + (-bounce).toFixed(2) + "px) rotate(" +
+              sway.toFixed(3) + "deg) scale(" + (breathe + punch + holdPop).toFixed(4) + ")";
+
+            /* loop frame: freeze during holds via loopTime integration */
+            var lt = loopTime(t);
+            var loopFrames = cfg.loop_frames || 109;
+            var fps = cfg.loop_fps || 24;
+            var bi = Math.floor(lt * fps) % loopFrames;
+            if (bi < 0) bi += loopFrames;
+            var el = bandEls[curStyle];
+            if (bi !== el.idx) bandFrameFor(el, bi, loopFrames);
+            if (prevStyle && fadeOld > 0.003 && bandEls[prevStyle]) {
+              // outgoing wrapper keeps its own playback rate during the dissolve
+              var pcfg = BSTYLES[prevStyle] || cfg;
+              var pe = bandEls[prevStyle];
+              var pbi = Math.floor(t * (pcfg.rate || 1) * (pcfg.loop_fps || 24))
+                % (pcfg.loop_frames || 109);
+              if (pbi !== pe.idx) bandFrameFor(pe, pbi, pcfg.loop_frames || 109);
+            }
+
+            /* stage light breathes with the style palette */
+            var g = cfg.glow || {base: 0.52, breath: 0.16, energy: 0.16};
+            bandGlowEl.style.opacity = (g.base + g.breath * Math.sin(t * 0.085 + 1.1) + g.energy * en).toFixed(3);
+
+            updateAccents(t);
+          }
 
           function render(t) {
             var leg = legAt(t);
@@ -474,22 +740,9 @@
             glow3.setAttribute("transform", "translate(" + (Math.sin(ph * 0.7 + 1.2) * 26).toFixed(1) + " " + (Math.cos(ph * 0.6) * -18).toFixed(1) + ") scale(" + (1 + 0.05 * Math.sin(ph * 0.45 + 2)).toFixed(3) + ")");
             glowwrap2.style.opacity = (0.16 + 0.26 * (0.5 + 0.5 * Math.sin(t * 0.048 + 0.7)) + en * 0.10).toFixed(3);
             tintEl.style.opacity = (0.10 + en * 0.22).toFixed(3);
-            bandGlowEl.style.opacity = (0.52 + 0.16 * Math.sin(t * 0.085 + 1.1) + en * 0.16).toFixed(3);
 
-            /* band: 109-frame loop at 24 fps, two sprite sheets of 8x7 cells */
-            var bi = Math.floor(t * 24) % 109;
-            if (bi !== bandIdx) {
-              bandIdx = bi;
-              var sheet = bi < 56 ? 0 : 1;
-              if (sheet !== bandSheet) {
-                bandSheet = sheet;
-                bandAEl.style.opacity = sheet === 0 ? "1" : "0";
-                bandBEl.style.opacity = sheet === 0 ? "0" : "1";
-              }
-              var local = sheet === 0 ? bi : bi - 56;
-              (sheet === 0 ? bandAEl : bandBEl).style.backgroundPosition =
-                (-(local % 8) * 1080) + "px " + (-Math.floor(local / 8) * 526) + "px";
-            }
+            /* band: style-driven performance (sheets, rate, choreography, accents) */
+            if (BAND) renderBand(t, en);
 
             /* lyrics */
             for (var i2 = 0; i2 < LYRICS.length; i2++) {

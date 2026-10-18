@@ -18,6 +18,7 @@ agent_created: true
 | 官方歌词（可选） | 用户手头有官方歌词时优先采用：文本零猜测，时间轴仍全部走实测重解（见 3A）。不给则用 Whisper 重建（3B） |
 | 歌名（可选） | 缺省取文件名；`Artist - Title.mp3` 会自动去掉歌手前缀 |
 | 主题句（可选） | 片头标题下的一行中文，缺省不显示 |
+| 乐队风格（可选） | `classic` / `emotional_listening` / `energetic_performance` / `funny_interaction` / `cozy_ensemble` / `auto` / `mixed`，缺省 `auto`；手动指定永远优先，详见「乐队表演风格系统」 |
 
 产出：`<project>/renders/video.mp4` + `renders/contact-sheet.jpg` + `transcript.json` + `NOTES.md`。
 
@@ -33,6 +34,39 @@ agent_created: true
 
 细节参数、颜色、字号、坑位见 `references/style-spec.md`。
 
+## 乐队表演风格系统
+
+同一套素材上叠加「播放速率 × 编舞曲线 × 角色点缀 × 舞台光」的参数化组合，得到五种可辨识的表演风格。
+默认 `classic` 完全保留本站最初验证过的观感（速率 1.0、无点缀、原舞台光），是**向后兼容兜底**：
+旧项目没有 `style_plan.json` 时 `build_frame.py` 自动按 classic 出帧，渲染结果与原版一致。
+
+| style_id | 名称 | 适合 | 动画强度 | 互动概率 |
+| --- | --- | --- | --- | --- |
+| `classic` | 经典循环 | 任何歌（默认/兜底） | 0.00 | 0.00 |
+| `emotional_listening` | 深情倾听 | 慢歌、低能量、抒情 | 0.25 | 0.05 |
+| `energetic_performance` | 激情演奏 | ≥105 BPM、高能量 | 1.00 | 0.15 |
+| `funny_interaction` | 搞笑互动 | 过门、hard stop、rolls 多 | 0.70 | 1.00 |
+| `cozy_ensemble` | 温馨合奏 | 中速平稳、陪伴感 | 0.45 | 0.35 |
+
+选择优先级：**命令行 `--style` > `project.json.style` > `auto` 自动推荐 > `mixed` 分段混搭**。
+`auto` 从 `audiomap.json` 的音乐特征判定（BPM、能量中位数、起伏、过门数量），判定链与随机种子都写进
+`references/style-spec.md`；`mixed` 按 4 小节乐句能量分段，搞笑桥段锚定 hard_stop / roll 尾 / SURGE / DROP
+音乐事件而非拍点网格，段间 0.45 s 交叉淡变。所有风格共享同一张 109 帧雪碧图，**不新增素材、不影响内存**。
+
+**确定性纪律**（四风格共守）：
+
+- 随机行为（点缀时机、定格选择、段边界微调）一律来自 `crc32(artist|title|mode)` 种子预生成时间表，浏览器运行时零随机；
+- 禁止仅凭 BPM 判情绪；禁止所有角色同动作；禁止每拍都触发互动（点缀间隔 ≥ 0.32 s，按段落概率缩放）；
+- 播放速率 0.625× / 1.0× / 1.25× 都与 30 fps 输出整数对齐，不引入新抖动；
+- 风格切换只改表演层，**绝不动歌词时间轴**；渲染状态全是纯函数 `render(t)`，任意 seek 结果一致（同时间点两次渲染像素级相同）。
+
+## 语言支持
+
+正式支持 **en（英文）/ ja（日文）/ zh（中文）** 三语，混唱按逐句实际语言走 `en` 槽位 + `zh` 翻译。
+已实测：`--lang en` 全曲通道（本 skill 的默认路径）、`--lang ja` / `--lang zh` 强制通道解码正常（medium/large 各 205.9 s 音频 42/49 段），
+模板为假名/汉字声明了 `Yu Gothic UI / Yu Gothic / Meiryo / MS Gothic` 兜底字体；中文原文歌（`zh` 留空）只渲染一行，不出空译行。
+混语言歌必须用 `transcribe_mixed.py` 逐窗自动判语种，不要用 `--lang` 锁单语（见流程第 2 步）。
+
 ## 流程
 
 设 `HF` = HyperFrames 安装根目录（默认 `G:\hyperframes`），
@@ -42,11 +76,12 @@ agent_created: true
 ### 1. 建项目
 
 ```bash
-"$PY" "$SK/scripts/new_project.py" "<音频路径>" "<歌手名>" [--title "歌名"] [--tagline "一行中文"] [--root G:/hyperframes/videos]
+"$PY" "$SK/scripts/new_project.py" "<音频路径>" "<歌手名>" [--title "歌名"] [--tagline "一行中文"] [--style auto|mixed|classic|emotional_listening|energetic_performance|funny_interaction|cozy_ensemble] [--root G:/hyperframes/videos]
 ```
 
 输出项目绝对路径，务必记下。它会：建唯一目录 → 复制音频 → 转 16 kHz 单声道 WAV → 跑官方
-`analyze-beatgrid.py` 生成 `audiomap.json` → 复制乐队雪碧图与 GSAP → 写 `project.json`。
+`analyze-beatgrid.py` 生成 `audiomap.json` → 复制乐队雪碧图与 GSAP → 写 `project.json`（含 `style` 字段）。
+`--style` 缺省 `auto`；稍后想换风格可以改 `project.json` 的 `style` 或给 `plan_styles.py` 传参覆盖，命令行优先级最高。
 
 **绝不覆盖已有项目目录**；修改已交付作品必须新建项目。
 
@@ -150,10 +185,15 @@ CPU int8 跑 3–4 分钟的歌约 3–6 分钟。非英语歌把 `--lang` 换�
 ```bash
 "$PY" "$SK/scripts/align_lyrics.py" "<project>"
 "$PY" "$SK/scripts/motion.py" "<project>"
+"$PY" "$SK/scripts/plan_styles.py" "<project>" [--style auto|mixed|……]
 "$PY" "$SK/scripts/gen_storyboard.py" "<project>"
 "$PY" "$SK/scripts/build_frame.py" "<project>"
 "$PY" "$SK/scripts/make_index.py" "<project>"
 ```
+
+`plan_styles.py` 在 `align_lyrics` 之后、`gen_storyboard` / `build_frame` **之前**跑（后两者读它的 `style_plan.json`）：
+它只用 `audiomap.json` + 歌手/歌名种子，不碰歌词时间轴；省略 `--style` 时按 `project.json.style` → auto 解析。
+旧项目没有这一步也能出帧（自动 classic 兜底）。
 
 `align_lyrics.py` 会打印逐行时间表，并做两道硬检查：
 
@@ -176,6 +216,7 @@ node "$HF/packages/cli/bin/hyperframes.mjs" snapshot . --at "3,20,60,120" --no-e
 
 必须做到：lint / runtime / layout / motion **0 error**，contrast 全部通过 WCAG AA。
 然后**实际看截图**：玻璃体是否完整、歌词是否居中、乐队是否在底部、有没有多余的泡泡或段落标签。
+用 `mixed` 时再看 `style_plan.json` 的 `segments`：风格切换时刻应落在乐句/音乐事件附近，interaction 段有点缀和定格。
 `composition_file_too_large` 是单帧文件超过 300 行的风格提示，可接受（单时间轴设计必然如此）。
 
 ### 6. 渲染 + 验收
@@ -196,6 +237,8 @@ node "$HF/packages/cli/bin/hyperframes.mjs" render . --skill=music-to-video -q d
 - 用户提供的官方歌词优先于任何模型重建结果；两者冲突时按官方采用，并把差异写进 NOTES.md 请用户确认。
 - 不得因为「看起来更好」而改分辨率、帧率、时长、署名或字幕位置。
 - 不得在未验证的情况下宣称音画同步；每首歌都要抽帧看。
+- 风格系统（选择、分段、点缀、定格）不得影响歌词时间轴，也不得动用 CSS transition/animation（渲染逐帧 seek，必须全是 `t` 的纯函数）。
+- 旧项目（无 `style_plan.json`）按 classic 兜底即可，**不要为了对齐新流水线去重建已交付项目的帧**；要改版就新建项目。
 - 素材缺失、工具不可用、规格冲突 → 明确报告，不用估算数据冒充结果。
 - 已交付项目与其源文件视为只读；改版必须新建目录。
 
@@ -223,3 +266,7 @@ node "$HF/packages/cli/bin/hyperframes.mjs" render . --skill=music-to-video -q d
   合并对照表写进 NOTES.md。
 - **headless 字体加载失败**（抽帧时 Yu Gothic UI 报 FAILED）不必紧张：`src: local()` 的字体系统装了浏览器一般能找到，
   下一顺位字体也会兜底，先看截图再决定要不要处理。
+- **风格段被 `merge_tiny` 吃掉**：搞笑段是 1.4–2.0 s 的 one-off，`plan_styles.py` 已对 `funny_interaction` 加白名单跳过合并；
+  改混合模式策略时别把这段删了，否则搞笑桥段不会出现。
+- **`cap_styles` 按雪碧图组数（不是风格数）设上限**：五风格共用同一张 109 帧图，所以四风格可共存；
+  将来若某风格引入独立素材，上限会按素材组收紧，届时检查 `style_plan.json` 的 `used_styles`。

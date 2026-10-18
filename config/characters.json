@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "notes": {
+    "anchor": "身体锚点，乐队单元 720x350 坐标系（模板中 x1.5 / x1.503 映射到 1080x526 乐队层）",
+    "spawn": "点缀（音符/爱心/惊叹号等）出现位置，取头部前上方",
+    "accent_weight": "该角色被点缀选中的基础权重（会被风格 accent.char_weights 再修正）",
+    "character_note": "性格与乐器分配是「表演设定」，用于选择互动事件的反应方，不直接驱动骨骼（素材为整幅循环雪碧图，无逐角色图层，详见 SKILL.md 限制说明）"
+  },
+  "characters": {
+    "cat": {
+      "name": "猫",
+      "instrument": "电吉他",
+      "personality": "灵活、优雅，主音吉他手，演奏投入时会跟着摇头",
+      "anchor": [150, 215],
+      "spawn": [135, 48],
+      "accent_weight": 1.0
+    },
+    "penguin": {
+      "name": "企鹅",
+      "instrument": "指挥台 / 铃鼓",
+      "personality": "认真、略显呆萌的队长，负责指挥节奏和搞笑反应",
+      "anchor": [312, 235],
+      "spawn": [335, 48],
+      "accent_weight": 1.0
+    },
+    "bear": {
+      "name": "熊",
+      "instrument": "架子鼓",
+      "personality": "沉稳、有力量的鼓手，戴耳机沉浸在自己的节奏里",
+      "anchor": [390, 120],
+      "spawn": [425, 14],
+      "accent_weight": 1.0
+    },
+    "fox": {
+      "name": "狐狸",
+      "instrument": "电子琴",
+      "personality": "活泼、机灵的键盘手，爱炫技也爱主动带动气氛",
+      "anchor": [570, 225],
+      "spawn": [595, 55],
+      "accent_weight": 1.0
+    }
+  }
+}
