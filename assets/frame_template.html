@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Inter"; src: local("Segoe UI"); font-weight: 300 700; }
+        @font-face { font-family: "EB Garamond"; src: local("Georgia"); font-weight: 400; }
+        @font-face { font-family: "JetBrains Mono"; src: local("Consolas"); font-weight: 400 600; }
+        @font-face { font-family: "Noto Serif SC"; src: local("SimSun"), local("宋体"); font-weight: 400; }
+        @font-face { font-family: "SimSun"; src: local("SimSun"), local("宋体"); font-weight: 400; }
+        @font-face { font-family: "Yu Gothic UI"; src: local("Yu Gothic UI"), local("游ゴシック UI"); font-weight: 400 700; }
+        @font-face { font-family: "Yu Gothic"; src: local("Yu Gothic"), local("游ゴシック"); font-weight: 400 700; }
+        @font-face { font-family: "Meiryo"; src: local("Meiryo"), local("メイリオ"); font-weight: 400 700; }
+        @font-face { font-family: "MS Gothic"; src: local("MS Gothic"), local("ＭＳ ゴシック"); font-weight: 400 700; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 1080px; height: 1920px; overflow: hidden; background: #04050D; }
+
+        #stage {
+          position: relative; width: 1080px; height: 1920px; overflow: hidden;
+          background: #04050D;
+          font-family: "Inter", sans-serif;
+          -webkit-font-smoothing: antialiased;
+        }
+
+        .sky {
+          position: absolute; inset: 0;
+          background:
+            radial-gradient(118% 74% at 50% 6%, #0D1238 0%, #070A1E 44%, #04050D 80%),
+            linear-gradient(180deg, #05060F 0%, #06081A 58%, #03040A 100%);
+        }
+
+        #glowwrap { position: absolute; inset: 0; }
+        .glow { position: absolute; border-radius: 50%; }
+        .g1 {
+          width: 980px; height: 980px; left: -300px; top: -260px;
+          background: radial-gradient(circle at 50% 50%, rgba(58, 88, 196, 0.55) 0%, rgba(58, 88, 196, 0.16) 46%, rgba(58, 88, 196, 0) 72%);
+          filter: blur(26px);
+        }
+        .g2 {
+          width: 900px; height: 900px; right: -280px; top: 180px;
+          background: radial-gradient(circle at 50% 50%, rgba(112, 66, 186, 0.48) 0%, rgba(112, 66, 186, 0.14) 46%, rgba(112, 66, 186, 0) 72%);
+          filter: blur(26px);
+        }
+        .g3 {
+          width: 1040px; height: 760px; left: -120px; bottom: -240px;
+          background: radial-gradient(circle at 50% 50%, rgba(36, 108, 140, 0.40) 0%, rgba(36, 108, 140, 0.12) 48%, rgba(36, 108, 140, 0) 74%);
+          filter: blur(30px);
+        }
+
+
+        #glowwrap2 { position: absolute; inset: 0; opacity: 0; }
+        .h1 { width: 940px; height: 940px; right: -240px; top: -180px; background: radial-gradient(circle at 50% 50%, rgba(28, 132, 158, 0.50) 0%, rgba(28, 132, 158, 0.14) 46%, rgba(28, 132, 158, 0) 72%); filter: blur(30px); }
+        .h2 { width: 860px; height: 860px; left: -240px; top: 420px; background: radial-gradient(circle at 50% 50%, rgba(150, 58, 128, 0.42) 0%, rgba(150, 58, 128, 0.12) 46%, rgba(150, 58, 128, 0) 72%); filter: blur(30px); }
+        .h3 { width: 900px; height: 700px; right: -160px; bottom: -120px; background: radial-gradient(circle at 50% 50%, rgba(72, 62, 178, 0.46) 0%, rgba(72, 62, 178, 0.12) 48%, rgba(72, 62, 178, 0) 74%); filter: blur(34px); }
+
+        .tint { position: absolute; inset: 0; background: #2A1740; opacity: 0; mix-blend-mode: soft-light; }
+
+        .band-glow {
+          position: absolute; inset: 0;
+          background: radial-gradient(46% 31% at 50% 89%, rgba(44, 118, 150, 0.34) 0%, rgba(44, 118, 150, 0.11) 46%, rgba(44, 118, 150, 0) 76%);
+        }
+        .band {
+          position: absolute; left: 0; bottom: 0; width: 1080px; height: 526px;
+          mix-blend-mode: screen; background-repeat: no-repeat; background-size: 8640px 3682px;
+        }
+        #bandA { background-image: url(../../assets/band_sheet1.webp); }
+        #bandB { background-image: url(../../assets/band_sheet2.webp); opacity: 0; }
+
+        .bubble-layer { position: absolute; inset: 0; width: 1080px; height: 1920px; }
+
+        .scrim {
+          position: absolute; left: 0; right: 0; top: 640px; height: 640px;
+          background: radial-gradient(96% 46% at 50% 50%, rgba(4, 5, 13, 0.90) 0%, rgba(4, 5, 13, 0.86) 46%, rgba(4, 5, 13, 0.54) 70%, rgba(4, 5, 13, 0.20) 84%, rgba(4, 5, 13, 0) 95%);
+        }
+
+        .credit {
+          position: absolute; left: 0; right: 0; top: 104px; text-align: center;
+          font-family: "JetBrains Mono", monospace; font-size: 21px; font-weight: 500;
+          letter-spacing: 0.42em; text-indent: 0.42em; color: rgba(238, 240, 250, 0.72);
+          opacity: 0;
+        }
+
+        .lyrics { position: absolute; left: 60px; right: 60px; top: 0; bottom: 0; }
+        .line {
+          position: absolute; left: 0; right: 0; top: 50%; text-align: center; opacity: 0;
+          transform: translateY(-50%);
+        }
+        .line .en {
+          font-family: "Inter", "Yu Gothic UI", "Yu Gothic", "Meiryo", "MS Gothic", sans-serif; font-weight: 500;
+          line-height: 1.26; letter-spacing: 0.002em;
+          color: #F5F2EB; text-wrap: balance;
+          text-shadow: 0 3px 36px rgba(0, 0, 0, 0.96), 0 1px 8px rgba(0, 0, 0, 0.9);
+        }
+        .line .zh {
+          margin-top: 26px;
+          font-family: "Noto Serif SC", "SimSun", serif; font-weight: 400;
+          font-size: 37px; line-height: 1.52; letter-spacing: 0.10em;
+          color: #DDA97D;
+          text-shadow: 0 2px 28px rgba(0, 0, 0, 0.98), 0 1px 5px rgba(0, 0, 0, 0.92);
+        }
+
+        .title {
+          position: absolute; left: 0; right: 0; top: 50%; text-align: center; opacity: 0;
+          transform: translateY(-50%);
+        }
+        .title .kicker {
+          font-family: "JetBrains Mono", monospace; font-size: 22px; font-weight: 500;
+          letter-spacing: 0.44em; text-indent: 0.44em; color: rgba(238, 240, 250, 0.78);
+        }
+        .title .name {
+          margin-top: 34px;
+          font-family: "EB Garamond", Georgia, serif; font-size: __TITLE_SIZE__px; font-weight: 400;
+          line-height: 1.0; letter-spacing: -0.02em; color: #F7F3EA;
+          text-shadow: 0 6px 60px rgba(0, 0, 0, 0.9);
+        }
+        .title .rule {
+          width: 168px; height: 1px; margin: 44px auto 0;
+          background: linear-gradient(90deg, rgba(221, 169, 125, 0), rgba(221, 169, 125, 0.95), rgba(221, 169, 125, 0));
+        }
+        .title .sub {
+          margin-top: 40px;
+          font-family: "Noto Serif SC", "SimSun", serif; font-size: 34px; letter-spacing: 0.16em;
+          color: #DDA97D; text-shadow: 0 2px 26px rgba(0, 0, 0, 0.96);
+        }
+
+        .outro {
+          position: absolute; left: 0; right: 0; top: 50%; text-align: center; opacity: 0;
+          transform: translateY(-50%);
+        }
+        .outro .name {
+          font-family: "EB Garamond", Georgia, serif; font-size: __OUTRO_SIZE__px; letter-spacing: -0.01em;
+          color: #F7F3EA; text-shadow: 0 6px 50px rgba(0, 0, 0, 0.92);
+        }
+        .outro .by {
+          margin-top: 30px; font-family: "JetBrains Mono", monospace; font-size: 20px;
+          letter-spacing: 0.4em; text-indent: 0.4em; color: rgba(238, 240, 250, 0.66);
+        }
+
+        .fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+      </style>
+
+      <div id="stage" data-composition-id="01-f1" data-start="0" data-duration="__DUR__" data-width="1080" data-height="1920">
+        <div class="sky" id="sky" data-track-index="0"></div>
+        <div id="glowwrap" data-track-index="0">
+          <div class="glow g1" id="glow1"></div>
+          <div class="glow g2" id="glow2"></div>
+          <div class="glow g3" id="glow3"></div>
+        </div>
+        <div id="glowwrap2" data-track-index="0">
+          <div class="glow h1" id="glowh1"></div>
+          <div class="glow h2" id="glowh2"></div>
+          <div class="glow h3" id="glowh3"></div>
+        </div>
+        <div class="tint" id="tint" data-track-index="0"></div>
+
+        <div class="band-glow" id="bandGlow" data-track-index="0"></div>
+        <div class="band" id="bandA" data-track-index="0"></div>
+        <div class="band" id="bandB" data-track-index="0"></div>
+
+        <svg class="bubble-layer" id="bubbleLayer" viewBox="0 0 1080 1920" width="1080" height="1920" data-track-index="0">
+          <defs>
+            <radialGradient id="glassGrad" cx="34%" cy="26%" r="84%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.34" />
+              <stop offset="14%" stop-color="#cfe0ff" stop-opacity="0.135" />
+              <stop offset="40%" stop-color="#8ea9ee" stop-opacity="0.055" />
+              <stop offset="64%" stop-color="#6f8ad8" stop-opacity="0.030" />
+              <stop offset="85%" stop-color="#b7caf9" stop-opacity="0.075" />
+              <stop offset="95%" stop-color="#eef4ff" stop-opacity="0.19" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.30" />
+            </radialGradient>
+            <linearGradient id="rimGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#B7E4FF" stop-opacity="0.92" />
+              <stop offset="18%" stop-color="#D3BEFF" stop-opacity="0.80" />
+              <stop offset="38%" stop-color="#FFCBDE" stop-opacity="0.70" />
+              <stop offset="56%" stop-color="#FFE6C4" stop-opacity="0.74" />
+              <stop offset="74%" stop-color="#B9FFEE" stop-opacity="0.78" />
+              <stop offset="88%" stop-color="#C7E6FF" stop-opacity="0.86" />
+              <stop offset="100%" stop-color="#B7E4FF" stop-opacity="0.92" />
+            </linearGradient>
+            <linearGradient id="innerLight" x1="0.2" y1="0" x2="0.8" y2="1">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.12" />
+              <stop offset="38%" stop-color="#cddfff" stop-opacity="0.04" />
+              <stop offset="70%" stop-color="#ffffff" stop-opacity="0" />
+              <stop offset="100%" stop-color="#bcd4ff" stop-opacity="0.05" />
+            </linearGradient>
+            <radialGradient id="hlGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.58" />
+              <stop offset="48%" stop-color="#ffffff" stop-opacity="0.18" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="hlGrad2" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.30" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="sheenGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#dce9ff" stop-opacity="0.18" />
+              <stop offset="100%" stop-color="#dce9ff" stop-opacity="0" />
+            </radialGradient>
+            <filter id="blurBig" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="10" />
+            </filter>
+            <filter id="blurMid" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="12" />
+            </filter>
+            <filter id="blurFilm" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3.4" />
+            </filter>
+            <clipPath id="shapeClip" clipPathUnits="userSpaceOnUse">
+              <path id="clipPath" d="M 0 -1 Z" />
+            </clipPath>
+          </defs>
+
+          <g id="bubble" transform="translate(540 700)">
+            <path id="rimGlow" fill="none" stroke="url(#rimGrad)" stroke-width="20" opacity="0.20" filter="url(#blurBig)" d="M 0 -1 Z" />
+            <path id="body" fill="url(#glassGrad)" stroke="url(#rimGrad)" stroke-width="2.6" opacity="0.98" d="M 0 -1 Z" />
+            <path id="innerLight" fill="url(#innerLight)" stroke="none" clip-path="url(#shapeClip)" d="M 0 -1 Z" />
+            <path id="film" fill="none" stroke="url(#rimGrad)" stroke-width="13" opacity="0.30" filter="url(#blurFilm)" clip-path="url(#shapeClip)" d="M 0 -1 Z" />
+            <path id="innerShade" fill="none" stroke="#070912" stroke-width="30" opacity="0.26" filter="url(#blurMid)" clip-path="url(#shapeClip)" d="M 0 -1 Z" />
+            <g clip-path="url(#shapeClip)">
+              <ellipse cx="-84" cy="-112" rx="98" ry="48" fill="url(#hlGrad)" transform="rotate(-28 -84 -112)" />
+              <ellipse cx="98" cy="118" rx="42" ry="24" fill="url(#hlGrad2)" />
+              <ellipse cx="4" cy="152" rx="148" ry="58" fill="url(#sheenGrad)" />
+            </g>
+          </g>
+        </svg>
+
+        <div class="scrim" id="scrim" data-track-index="1"></div>
+        <div class="credit" id="credit" data-track-index="1">__ARTIST_UPPER__</div>
+        <div class="lyrics" id="lyrics" data-track-index="1"></div>
+
+        <div class="title" id="title" data-track-index="2">
+          <div class="kicker">__ARTIST_UPPER__</div>
+          <div class="name" id="titleName">__TITLE__</div>
+          <div class="rule"></div>
+          <div class="sub">__TAGLINE__</div>
+        </div>
+
+        <div class="outro" id="outro" data-track-index="2">
+          <div class="name" id="outroName">__TITLE__</div>
+          <div class="by">__ARTIST_UPPER__</div>
+        </div>
+
+        <div class="fade" id="fade" data-track-index="3"></div>
+      </div>
+
+      <script>
+        (function () {
+          var DUR = __DUR__;
+          var N = 96;
+          var ANGLES = [];
+          for (var i = 0; i < N; i++) ANGLES.push((i / N) * Math.PI * 2);
+
+          /* ---------- geometry ---------- */
+          function arcPoints(cx, cy, rx, ry, a0, a1, steps) {
+            var out = [];
+            for (var k = 0; k <= steps; k++) {
+              var a = a0 + (a1 - a0) * (k / steps);
+              out.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+            }
+            return out;
+          }
+
+          function roundedPolyPoints(sides, R, rot, cornerRatio) {
+            var v = [];
+            for (var i = 0; i < sides; i++) {
+              var a = rot + (i / sides) * Math.PI * 2 - Math.PI / 2;
+              v.push([Math.cos(a) * R, Math.sin(a) * R]);
+            }
+            var pts = [];
+            for (var j = 0; j < sides; j++) {
+              var p = v[j];
+              var prev = v[(j - 1 + sides) % sides];
+              var next = v[(j + 1) % sides];
+              var d1 = Math.hypot(prev[0] - p[0], prev[1] - p[1]);
+              var d2 = Math.hypot(next[0] - p[0], next[1] - p[1]);
+              var t = Math.min(d1, d2) * cornerRatio;
+              var p1 = [p[0] + ((prev[0] - p[0]) / d1) * t, p[1] + ((prev[1] - p[1]) / d1) * t];
+              var p2 = [p[0] + ((next[0] - p[0]) / d2) * t, p[1] + ((next[1] - p[1]) / d2) * t];
+              for (var s = 0; s <= 14; s++) {
+                var u = s / 14;
+                pts.push([
+                  (1 - u) * (1 - u) * p1[0] + 2 * (1 - u) * u * p[0] + u * u * p2[0],
+                  (1 - u) * (1 - u) * p1[1] + 2 * (1 - u) * u * p[1] + u * u * p2[1],
+                ]);
+              }
+            }
+            return pts;
+          }
+
+          function roundedRectPoints(w, h, r) {
+            var hw = w / 2, hh = h / 2, pts = [];
+            pts.push([-hw + r, -hh], [hw - r, -hh]);
+            pts = pts.concat(arcPoints(hw - r, -hh + r, r, r, -Math.PI / 2, 0, 10));
+            pts.push([hw, hh - r]);
+            pts = pts.concat(arcPoints(hw - r, hh - r, r, r, 0, Math.PI / 2, 10));
+            pts.push([-hw + r, hh]);
+            pts = pts.concat(arcPoints(-hw + r, hh - r, r, r, Math.PI / 2, Math.PI, 10));
+            pts.push([-hw, -hh + r]);
+            pts = pts.concat(arcPoints(-hw + r, -hh + r, r, r, Math.PI, Math.PI * 1.5, 10));
+            return pts;
+          }
+
+          function radiusAt(pts, ang) {
+            var ux = Math.cos(ang), uy = Math.sin(ang), best = 0;
+            for (var i = 0; i < pts.length; i++) {
+              var p = pts[i], q = pts[(i + 1) % pts.length];
+              var ex = q[0] - p[0], ey = q[1] - p[1];
+              var den = ux * ey - uy * ex;
+              if (Math.abs(den) < 1e-9) continue;
+              var s = (p[0] * ey - p[1] * ex) / den;
+              var t = (p[0] * uy - p[1] * ux) / den;
+              if (s > 0 && t >= -0.0001 && t <= 1.0001 && s > best) best = s;
+            }
+            return best;
+          }
+
+          function toRadial(pts) {
+            var out = [];
+            for (var i = 0; i < N; i++) out.push(radiusAt(pts, ANGLES[i]));
+            return out;
+          }
+
+          var R = 214;
+          var SHAPES = [
+            toRadial(arcPoints(0, 0, R, R, 0, Math.PI * 2, 240)),
+            toRadial(arcPoints(0, 0, R, R * 0.70, 0, Math.PI * 2, 240)),
+            toRadial(arcPoints(0, 0, R * 0.72, R, 0, Math.PI * 2, 240)),
+            toRadial(roundedRectPoints(R * 1.78, R * 1.40, 74)),
+            toRadial(roundedPolyPoints(4, R, Math.PI / 4, 0.30)),
+            toRadial(roundedPolyPoints(3, R, Math.PI, 0.26)),
+            toRadial(roundedPolyPoints(5, R, -Math.PI / 2, 0.28)),
+            toRadial(roundedPolyPoints(6, R, 0, 0.26)),
+          ];
+
+          function pathFromRadii(r) {
+            var d = "M " + r[0].toFixed(2) + " 0";
+            for (var i = 1; i < N; i++) {
+              d += " L " + (Math.cos(ANGLES[i]) * r[i]).toFixed(2) + " " + (Math.sin(ANGLES[i]) * r[i]).toFixed(2);
+            }
+            return d + " Z";
+          }
+
+          /* ---------- precomputed drift + bounces ---------- */
+          var MOTION = /*__MOTION__*/{ "legs": [], "bounces": [] };
+          var ENERGY = /*__ENERGY__*/[[0, 1, 0.02]];
+          var LYRICS = /*__LYRICS__*/[];
+
+          function energyAt(t) {
+            for (var i = 0; i < ENERGY.length; i++) {
+              if (t >= ENERGY[i][0] && t < ENERGY[i][1]) {
+                var a = ENERGY[i][2];
+                var b = i + 1 < ENERGY.length ? ENERGY[i + 1][2] : a;
+                var u = (t - ENERGY[i][0]) / Math.max(0.001, ENERGY[i][1] - ENERGY[i][0]);
+                return a + (b - a) * Math.min(1, u);
+              }
+            }
+            return 0.3;
+          }
+
+          /* ---------- lyric nodes ---------- */
+          var lyricEls = [];
+          var lyricsRoot = document.getElementById("lyrics");
+          for (var li = 0; li < LYRICS.length; li++) {
+            var L = LYRICS[li];
+            var el = document.createElement("div");
+            el.className = "line";
+            var en = document.createElement("div");
+            en.className = "en";
+            en.style.fontSize = L.size + "px";
+            en.textContent = L.en;
+            var zh = document.createElement("div");
+            zh.className = "zh";
+            zh.textContent = L.zh;
+            el.appendChild(en);
+            el.appendChild(zh);
+            lyricsRoot.appendChild(el);
+            lyricEls.push(el);
+          }
+
+          function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+          function smooth(a, b, x) { var u = clamp01((x - a) / (b - a)); return u * u * (3 - 2 * u); }
+          function easeInOut(u) { return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; }
+          function lerp(a, b, u) { return a + (b - a) * u; }
+
+          var legs = MOTION.legs, bounces = MOTION.bounces;
+
+          function legAt(t) {
+            var lo = 0, hi = legs.length - 1;
+            while (lo < hi) {
+              var mid = (lo + hi) >> 1;
+              if (t > legs[mid].t1) lo = mid + 1; else hi = mid;
+            }
+            return legs[lo];
+          }
+
+          var bodyEl = document.getElementById("body");
+          var glowEl = document.getElementById("rimGlow");
+          var shadeEl = document.getElementById("innerShade");
+          var filmEl = document.getElementById("film");
+          var lightEl = document.getElementById("innerLight");
+          var clipEl = document.getElementById("clipPath");
+          var bubbleEl = document.getElementById("bubble");
+          var glow1 = document.getElementById("glow1");
+          var glow2 = document.getElementById("glow2");
+          var glow3 = document.getElementById("glow3");
+          var glowwrap2 = document.getElementById("glowwrap2");
+          var tintEl = document.getElementById("tint");
+          var bandGlowEl = document.getElementById("bandGlow");
+          var bandAEl = document.getElementById("bandA");
+          var bandBEl = document.getElementById("bandB");
+          var bandIdx = -1, bandSheet = -1;
+          var creditEl = document.getElementById("credit");
+          var titleEl = document.getElementById("title");
+          var outroEl = document.getElementById("outro");
+          var fadeEl = document.getElementById("fade");
+
+          var lastShapeKey = "";
+
+          function render(t) {
+            var leg = legAt(t);
+            var u = clamp01((t - leg.t0) / Math.max(0.001, leg.t1 - leg.t0));
+            var x = lerp(leg.x0, leg.x1, u);
+            var y = lerp(leg.y0, leg.y1, u);
+
+            /* shape + morph */
+            var radii = SHAPES[0], shapeKey = "s0", lastB = null;
+            for (var b = 0; b < bounces.length; b++) {
+              if (bounces[b].t <= t) lastB = bounces[b]; else break;
+            }
+            if (lastB) {
+              var p = clamp01((t - lastB.m0) / (lastB.m1 - lastB.m0));
+              var e = easeInOut(p);
+              var A = SHAPES[lastB.from], B = SHAPES[lastB.to];
+              if (e >= 1) { radii = B; shapeKey = "s" + lastB.to; }
+              else {
+                radii = new Array(N);
+                for (var q = 0; q < N; q++) radii[q] = A[q] + (B[q] - A[q]) * e;
+                shapeKey = "m" + lastB.from + "-" + lastB.to + "-" + e.toFixed(3);
+              }
+            }
+            if (shapeKey !== lastShapeKey) {
+              var d = pathFromRadii(radii);
+              bodyEl.setAttribute("d", d);
+              glowEl.setAttribute("d", d);
+              shadeEl.setAttribute("d", d);
+              filmEl.setAttribute("d", d);
+              lightEl.setAttribute("d", d);
+              clipEl.setAttribute("d", d);
+              lastShapeKey = shapeKey;
+            }
+
+            /* elastic compression on impact */
+            var sx = 1, sy = 1;
+            for (var c = 0; c < bounces.length; c++) {
+              var bc = bounces[c];
+              if (bc.t < t - 0.30) continue;
+              if (bc.t > t + 0.26) break;
+              var sq = 1 - 0.11 * Math.sin(Math.PI * clamp01((t - (bc.t - 0.20)) / 0.50));
+              if (bc.nx !== 0) sx = sq; else sy = sq;
+            }
+            bubbleEl.setAttribute("transform",
+              "translate(" + x.toFixed(2) + " " + y.toFixed(2) + ") scale(" + sx.toFixed(4) + " " + sy.toFixed(4) + ")");
+
+            /* background breathing */
+            var en = energyAt(t);
+            var ph = t * 0.11;
+            glow1.setAttribute("transform", "translate(" + (Math.sin(ph) * 34).toFixed(1) + " " + (Math.cos(ph * 0.8) * 26).toFixed(1) + ") scale(" + (1 + 0.06 * Math.sin(ph * 0.6)).toFixed(3) + ")");
+            glow2.setAttribute("transform", "translate(" + (Math.cos(ph * 0.9) * -30).toFixed(1) + " " + (Math.sin(ph * 0.7) * 22).toFixed(1) + ") scale(" + (1 + 0.07 * Math.cos(ph * 0.5)).toFixed(3) + ")");
+            glow3.setAttribute("transform", "translate(" + (Math.sin(ph * 0.7 + 1.2) * 26).toFixed(1) + " " + (Math.cos(ph * 0.6) * -18).toFixed(1) + ") scale(" + (1 + 0.05 * Math.sin(ph * 0.45 + 2)).toFixed(3) + ")");
+            glowwrap2.style.opacity = (0.16 + 0.26 * (0.5 + 0.5 * Math.sin(t * 0.048 + 0.7)) + en * 0.10).toFixed(3);
+            tintEl.style.opacity = (0.10 + en * 0.22).toFixed(3);
+            bandGlowEl.style.opacity = (0.52 + 0.16 * Math.sin(t * 0.085 + 1.1) + en * 0.16).toFixed(3);
+
+            /* band: 109-frame loop at 24 fps, two sprite sheets of 8x7 cells */
+            var bi = Math.floor(t * 24) % 109;
+            if (bi !== bandIdx) {
+              bandIdx = bi;
+              var sheet = bi < 56 ? 0 : 1;
+              if (sheet !== bandSheet) {
+                bandSheet = sheet;
+                bandAEl.style.opacity = sheet === 0 ? "1" : "0";
+                bandBEl.style.opacity = sheet === 0 ? "0" : "1";
+              }
+              var local = sheet === 0 ? bi : bi - 56;
+              (sheet === 0 ? bandAEl : bandBEl).style.backgroundPosition =
+                (-(local % 8) * 1080) + "px " + (-Math.floor(local / 8) * 526) + "px";
+            }
+
+            /* lyrics */
+            for (var i2 = 0; i2 < LYRICS.length; i2++) {
+              var L2 = LYRICS[i2];
+              var fin = Math.min(0.24, Math.max(0.14, (L2.end - L2.start) * 0.16));
+              var outEnd = Math.min(L2.end + 0.16, L2.ns - 0.02);
+              var outIn = Math.max(L2.start + 0.3, Math.min(L2.end - 0.16, outEnd - 0.12));
+              var a2 = smooth(L2.start - 0.22, L2.start + fin, t) * (1 - smooth(outIn, outEnd, t));
+              var el2 = lyricEls[i2];
+              if (a2 <= 0.002) {
+                if (el2.style.opacity !== "0") { el2.style.opacity = "0"; el2.style.visibility = "hidden"; }
+              } else {
+                el2.style.visibility = "visible";
+                el2.style.opacity = a2.toFixed(3);
+                el2.style.transform = "translateY(-50%) translateY(" + ((1 - smooth(L2.start - 0.22, L2.start + fin, t)) * 16).toFixed(2) + "px)";
+              }
+            }
+
+            /* credit + title + outro */
+            creditEl.style.opacity = (0.55 * smooth(13.2, 14.8, t) * (1 - smooth(__CREDIT_OUT0__, __CREDIT_OUT1__, t))).toFixed(3);
+            titleEl.style.opacity = (smooth(__TITLE_IN0__, __TITLE_IN1__, t) * (1 - smooth(__TITLE_OUT0__, __TITLE_OUT1__, t))).toFixed(3);
+            titleEl.style.transform = "translateY(-50%) translateY(" + ((1 - smooth(__TITLE_IN0__, __TITLE_IN1P__, t)) * 22).toFixed(2) + "px)";
+            outroEl.style.opacity = smooth(__OUTRO_IN0__, __OUTRO_IN1__, t).toFixed(3);
+            fadeEl.style.opacity = (smooth(__FADE0__, __FADE1__, t) * 0.96).toFixed(3);
+          }
+
+          render(0);
+          var tl = gsap.timeline({ paused: true });
+          var st = { t: 0 };
+          tl.to(st, { t: DUR, duration: DUR, ease: "none", onUpdate: function () { render(st.t); } }, 0);
+          window.__timelines = window.__timelines || {};
+          window.__timelines["01-f1"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>
